@@ -6,6 +6,8 @@ from fastapi.responses import JSONResponse
 
 from schemas import GetVideo, Message, UploadVideo, User
 
+from models import Video
+
 video_router = APIRouter()
 
 
@@ -34,17 +36,21 @@ async def info_set(info: UploadVideo):
     return info
 
 
+@video_router.post('/video')
+async def create_video(video: Video):
+    await video.save()
+    return video
+
+
+
+
 @video_router.get('/video',
                   response_model=GetVideo,
                   responses={404: {
                       'model': Message
                   }})
 async def get_video():
-    user = {'id': 10, 'name': 'Taras'}
-    video = {'title': 'Test', 'description': 'Description'}
-    info = GetVideo(user=user, video=video)
-    return JSONResponse(status_code=200, content=info.dict())
-
+    pass
 
 
 @video_router.get('/test')
