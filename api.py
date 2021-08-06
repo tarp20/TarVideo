@@ -12,14 +12,15 @@ video_router = APIRouter()
 
 
 @video_router.post('/')
-async def root(title: str = Form(...),
-               description: str = Form(...),
-               file: UploadFile = File(...)):
+async def create_video(title: str = Form(...),
+                       description: str = Form(...),
+                       file: UploadFile = File(...)):
     info = UploadVideo(title, description)
     with open(f'{file.filename}', 'wb') as buffer:
-        shutil.copy(file.file, buffer)
+        shutil.copyfileobj(file.file, buffer)
+    user = await User.objects.first()
 
-    return {'file_name': file.filename, 'info': info}
+    return await Video.objects.create(file=file.filename, user=user, **info.dict)
 
 
 @video_router.post('/img', status_code=201)
@@ -42,15 +43,13 @@ async def create_video(video: Video):
     return video
 
 
-
-
-@video_router.get('/video',
-                  response_model=GetVideo,
+@video_router.get('/video/{video_pk}',
+                  response_model=Video,
                   responses={404: {
                       'model': Message
                   }})
-async def get_video():
-    pass
+async def get_video(video_pk: int):
+    return await Video.objects.select_related('user').get(pk=video_pk)
 
 
 @video_router.get('/test')
