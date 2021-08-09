@@ -1,26 +1,34 @@
 import shutil
+from http.client import HTTPException
 from typing import List
 
-from fastapi import APIRouter, File, Form, Request, UploadFile
+from fastapi import (APIRouter, File, Form, Request, UploadFile, HTTPException,
+                     BackgroundTasks)
 from fastapi.responses import JSONResponse
 
+from models import Video
 from schemas import GetVideo, Message, UploadVideo, User
 
-from models import Video
+from services import write_video
 
 video_router = APIRouter()
 
 
 @video_router.post('/')
-async def create_video(title: str = Form(...),
-                       description: str = Form(...),
-                       file: UploadFile = File(...)):
+async def create_video(
+        background_tasks: BackgroundTasks,
+        title: str = Form(...),
+        description: str = Form(...),
+        file: UploadFile = File(...)):
+    file_name = f'media/{file.filename}'
+    if file.content_type == 'video/mp4':
+        background_tasks.add_task(write_video, file_name, file)
+    else:
+        raise HTTPException(status_code=418, detail = 'It isnt mp4')
     info = UploadVideo(title, description)
-    with open(f'{file.filename}', 'wb') as buffer:
-        shutil.copyfileobj(file.file, buffer)
     user = await User.objects.first()
 
-    return await Video.objects.create(file=file.filename, user=user, **info.dict)
+    return await Video.objects.create(file=file_name, user=user, **info.dict)
 
 
 @video_router.post('/img', status_code=201)
