@@ -6,8 +6,8 @@ from fastapi import (APIRouter, File, Form, Request, UploadFile, HTTPException,
                      BackgroundTasks)
 from fastapi.responses import JSONResponse
 
-from models import Video
-from schemas import GetVideo, Message, UploadVideo, User
+from models import Video, User
+from schemas import GetVideo, Message, UploadVideo
 
 from services import write_video
 
@@ -25,10 +25,10 @@ async def create_video(
         background_tasks.add_task(write_video, file_name, file)
     else:
         raise HTTPException(status_code=418, detail = 'It isnt mp4')
-    info = UploadVideo(title, description)
+    info = UploadVideo(title=title, description=description)
     user = await User.objects.first()
 
-    return await Video.objects.create(file=file_name, user=user, **info.dict)
+    return await Video.objects.create(file=file_name, user=user, **info.dict())
 
 
 @video_router.post('/img', status_code=201)
@@ -48,7 +48,7 @@ async def info_set(info: UploadVideo):
 @video_router.post('/video')
 async def create_video(video: Video):
     await video.save()
-    return video
+    return video 
 
 
 @video_router.get('/video/{video_pk}',
