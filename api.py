@@ -1,15 +1,17 @@
 import shutil
+from uuid import uuid4
 from http.client import HTTPException
 from typing import List
 
 from fastapi import (APIRouter, File, Form, Request, UploadFile, HTTPException,
                      BackgroundTasks)
 from fastapi.responses import JSONResponse
+from starlette.responses import StreamingResponse
 
 from models import Video, User
 from schemas import GetVideo, Message, UploadVideo
 
-from services import write_video
+from services import save_video
 
 video_router = APIRouter()
 
@@ -20,15 +22,13 @@ async def create_video(
         title: str = Form(...),
         description: str = Form(...),
         file: UploadFile = File(...)):
-    file_name = f'media/{file.filename}'
-    if file.content_type == 'video/mp4':
-        background_tasks.add_task(write_video, file_name, file)
-    else:
-        raise HTTPException(status_code=418, detail = 'It isnt mp4')
-    info = UploadVideo(title=title, description=description)
     user = await User.objects.first()
 
-    return await Video.objects.create(file=file_name, user=user, **info.dict())
+    return await save_video(
+        user.dict().get("id"),
+        file, title, description, background_tasks
+    )
+
 
 
 @video_router.post('/img', status_code=201)
@@ -48,7 +48,7 @@ async def info_set(info: UploadVideo):
 @video_router.post('/video')
 async def create_video(video: Video):
     await video.save()
-    return video 
+    return video
 
 
 @video_router.get('/video/{video_pk}',
@@ -56,11 +56,8 @@ async def create_video(video: Video):
                   responses={404: {
                       'model': Message
                   }})
+
 async def get_video(video_pk: int):
-    return await Video.objects.select_related('user').get(pk=video_pk)
-
-
-@video_router.get('/test')
-async def get_test(req: Request):
-    print(req.user.dict())
-    return {}
+    file = await Video.objects.select_related('user').get(pk=video_pk)
+    file_like = open(file.dict().get('file'), mode='rb')
+    return StreamingResponse(file_like, media_type='video/mp4')
