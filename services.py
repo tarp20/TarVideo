@@ -2,7 +2,7 @@ from http.client import HTTPException
 from models import Video
 from schemas import UploadVideo
 import shutil
-# import aiofiles
+import aiofiles
 from uuid import uuid4
 
 from fastapi import UploadFile
@@ -18,7 +18,8 @@ async def save_video(
                 background_tasks: BackgroundTasks):
     file_name = f'media/{user}_{uuid4()}.mp4'
     if file.content_type == 'video/mp4':
-        background_tasks.add_task(write_video, file_name, file)
+        # background_tasks.add_task(write_video, file_name, file)
+        await write_video(file_name, file)
     else:
         raise HTTPException(status_code=418, detail='It isnt mp4')
     info = UploadVideo(title=title, description=description)
@@ -28,12 +29,11 @@ async def save_video(
 
 
 
-def write_video(file_name: str, file: UploadFile):
+async def write_video(file_name: str, file: UploadFile):
+    async with aiofiles.open(file_name, 'wb') as buffer: 
+        data = await file.read()
+        await buffer.write(data)
 
-    # async with aiofiles.open(file_name, 'wb') as buffer:  async version
-    #     data = await file.read()
-    #     await buffer.write(data)
 
-
-    with open(file_name, 'wb') as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    # with open(file_name, 'wb') as buffer:
+    #     shutil.copyfileobj(file.file, buffer)

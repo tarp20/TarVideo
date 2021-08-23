@@ -14,6 +14,11 @@ class UploadVideo(BaseModel):
     # tags: List[str] = None
 
 
+class GetListVideo(BaseModel):
+    id: int
+    title: str
+    description: str
+
 
 class GetVideo(BaseModel):
     user: User

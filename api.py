@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from starlette.responses import StreamingResponse
 
 from models import Video, User
-from schemas import GetVideo, Message, UploadVideo
+from schemas import GetListVideo, GetVideo, Message, UploadVideo
 
 from services import save_video
 
@@ -28,6 +28,20 @@ async def create_video(
         user.dict().get("id"),
         file, title, description, background_tasks
     )
+
+@video_router.get('/video/{video_pk}')
+async def get_video(video_pk: int):
+    file = await Video.objects.select_related('user').get(pk=video_pk)
+    file_like = open(file.file, mode='rb')
+    return StreamingResponse(file_like, media_type='video/mp4')
+
+
+@video_router.get('/user/{user_pk}', response_model=List[GetListVideo])
+async def get_list_video(user_pk: int):
+    video_list = await Video.objects.filter(user=user_pk).all()
+    return video_list
+
+
 
 
 
